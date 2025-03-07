@@ -44,22 +44,37 @@ if menu_option == "Dashboard":
         num_hubs = len(hubs)
         col2.metric(label="🏢 Hubs Participating", value=num_hubs)
 
-        # ================== VISUALIZATIONS ==================
+        # ================== FIX COLUMN NAMES ==================
+        structured_df.columns = structured_df.columns.str.strip()  # Remove extra spaces
+
+        # Identify the correct hub column names from the structured dataframe
+        hub_names = ["Rustenburg", "Polokwane", "Amandelbult", "Mogalakwena", "Mototolo", "Twickenham"]
+
+        # Ensure only existing hub columns are selected
+        valid_hub_columns = [col for col in hub_names if col in structured_df.columns]
+
+        # Compute total interventions per hub using actual data
+        hub_totals_corrected = structured_df[valid_hub_columns].sum().reset_index()
+        hub_totals_corrected.columns = ["Hub", "Total"]
+
+        # Display dataframe for verification
         st.subheader("📊 Interventions Distribution by Hub")
 
-        # Prepare data for visualization
-        hub_totals = structured_df[hubs].sum().reset_index()
-        hub_totals.columns = ["Hub", "Total"]
-        hub_totals["Hub"] = hub_totals["Hub"].str.replace(" Q1 Target", "")
-
-        # Highcharts Bar Chart - Interventions per Hub
+        # Highcharts Horizontal Bar Chart - Interventions per Hub
         chart_data = {
             "chart": {"type": "bar"},
             "title": {"text": "Interventions by Hub"},
-            "xAxis": {"categories": hub_totals["Hub"].tolist(), "title": {"text": "Hubs"}},
+            "xAxis": {"categories": hub_totals_corrected["Hub"].tolist(), "title": {"text": "Hubs"}},
             "yAxis": {"title": {"text": "Total Interventions"}},
-            "series": [{"name": "Interventions", "data": hub_totals["Total"].tolist()}]
+            "series": [{"name": "Interventions", "data": hub_totals_corrected["Total"].tolist()}],
+            "plotOptions": {
+                "bar": {
+                    "horizontal": True  # Ensures the bar chart is horizontal
+                }
+            }
         }
+
+        # Render the chart using Streamlit Highcharts
         hct.streamlit_highcharts(chart_data)
 
         # ================== PIE CHART - INTERVENTION DISTRIBUTION ==================
@@ -212,6 +227,7 @@ elif menu_option == "Log Frame":
 # ================== INTERVENTION TRACKER SECTION ==================
 elif menu_option == "Intervention Tracker":
     st.title("✅ Intervention Tracker")
+
     # ==================== Persistent Storage File ====================
     DATA_FILE = "structured_data.pkl"
     ACTUALS_FILE = "actuals_data.pkl"
@@ -221,6 +237,7 @@ elif menu_option == "Intervention Tracker":
         with open(DATA_FILE, "rb") as file:
             structured_df = pickle.load(file)
     else:
+        st.error("❌ Structured data file not found. Please upload data first.")
         st.stop()
 
     # Load actuals data or create new DataFrame
@@ -232,7 +249,7 @@ elif menu_option == "Intervention Tracker":
                                            "Area of Support", "Intervention", "POE", "Consultant 1",
                                            "Consultant 2", "Consultant 3", "Comments"])
 
-    # ==================== Prepopulated Enterprises & Hubs ====================
+    # ==================== Enterprise to Hub Mapping ====================
     enterprise_hub_map = {
         "Mogopogi Adventures": "Rustenburg",
         "Echo Gardens": "Rustenburg",
@@ -288,8 +305,6 @@ elif menu_option == "Intervention Tracker":
         "Zimasa Travel": "Rustenburg"
     }
 
-    # Extract Hubs and Provinces
-    hubs = list(set(enterprise_hub_map.values()))
     hub_province_map = {
         "Rustenburg": "North West",
         "Polokwane": "Limpopo",
@@ -299,50 +314,273 @@ elif menu_option == "Intervention Tracker":
         "Twickenham": "Limpopo"
     }
 
-    # Extract Sections and Interventions from Structured Data
-    sections = structured_df["Output"].unique().tolist()
-    interventions = structured_df["Intervention"].unique().tolist()
-    cleaned_interventions = [x.replace("Number of SMMEs ", "") for x in interventions]
+    enterprise_data = {
+        "Mogopogi Adventures": {
+            "Marketing & Sales": [
+                "Website Development & Domain Email Reg",
+                "Social Media Page Setup",
+                "Marketing Plan",
+            ],
+            "Business & Financial Management": [
+                "Management Accounts",
+                "Record Keeping and Management",
+            ],
+            "Mentorship & Training": [
+                "Financial Literacy Mentoring",
+                "Marketing Mentoring",
+                "Executive Mentoring",
+            ],
+        },
+        "Echo Gardens": {
+            "Marketing & Sales": [
+                "Website Hosting",
+                "Business Cards",
+                "Pamphlets & Brochures",
+            ],
+            "Business & Financial Management": [
+                "Regulatory Compliance (VAT, UIF, COIDA Registration)",
+                "Risk Management Plan",
+            ],
+        },
+        "Baking with Mrs Jay": {
+            "Marketing & Sales": [
+                "Company Profile",
+                "Email Signature",
+                "Branded Banner",
+            ],
+            "Business & Financial Management": [
+                "Business Funding Proposal",
+                "Funding Linkages",
+                "Insurance Tips Webinar",
+            ],
+            "Mentorship & Training": [
+                "Strategic Plan",
+                "Business Communication (How to Pitch)",
+            ],
+        },
+        "Dimasisi Projects": {
+            "Marketing & Sales": [
+                "Industry Membership",
+                "Marketing Linkages Time",
+                "Other Marketing Support",
+            ],
+            "Business & Financial Management": [
+                "CRM Solutions Linkages",
+                "Linkages with Chef",
+            ],
+        },
+        "Cecilian Creatives": {
+            "Marketing & Sales": [
+                "Company Profile",
+                "Branded Banner",
+                "Business Cards",
+            ],
+            "Technology & Digital Support": [
+                "Digital Transformation",
+                "Excel Skills Training",
+            ],
+        },
+        "Dingwako Lodge": {
+            "Marketing & Sales": [
+                "Pamphlets & Brochures",
+                "Website Hosting",
+            ],
+            "Training & Mentorship": [
+                "Industry Training (Courses)",
+                "Financial Literacy Mentoring",
+                "Fireside Chat",
+            ],
+        },
+        "Lady D Exclusive": {
+            "Marketing & Sales": [
+                "Website Development & Domain Email Reg",
+                "Social Media Page Setup",
+            ],
+            "Financial Management & Compliance": [
+                "Risk Management Plan",
+                "Business Operations Plan",
+            ],
+        },
+        "Divine Emporium Holdings": {
+            "Marketing & Sales": [
+                "Other Marketing Support",
+                "Marketing Plan",
+            ],
+            "Technology & Digital Support": [
+                "Technology Application Support",
+                "Growth Plan",
+            ],
+        },
+        "Boleresmary": {
+            "Marketing & Sales": [
+                "Branded Banner",
+                "Business Cards",
+            ],
+            "Business & Financial Management": [
+                "Regulatory Compliance",
+                "Financial Literacy Mentoring",
+            ],
+        },
+        "Calvinhos Services": {
+            "Marketing & Sales": [
+                "Company Profile",
+                "Marketing Plan",
+            ],
+            "Financial Management & Compliance": [
+                "Business Operations Plan",
+                "Funding Linkages",
+            ],
+        },
+        "Chedza Young Professional": {
+            "Marketing & Sales": [
+                "Business Cards",
+                "Social Media Page Setup",
+            ],
+            "Technology & Digital Support": [
+                "Industry Training (Courses)",
+                "Excel Skills Training",
+            ],
+        },
+        "Difokeng Africa": {
+            "Marketing & Sales": [
+                "Business Cards",
+                "Company Profile",
+            ],
+            "Business & Financial Management": [
+                "Regulatory Compliance",
+                "Financial Literacy Mentoring",
+            ],
+        },
+        "Food of Joy": {
+            "Marketing & Sales": [
+                "Branded Banner",
+                "Social Media Page Setup",
+            ],
+            "Technology & Digital Support": [
+                "Technology Application Support",
+                "Project Facilitation",
+            ],
+        },
+        "Frandmolf Enterprise": {
+            "Marketing & Sales": [
+                "Pamphlets & Brochures",
+                "Industry Membership",
+            ],
+            "Financial Management & Compliance": [
+                "Management Accounts",
+                "Funding Linkages",
+            ],
+        },
+        "Jaagbaan Lodge Capital": {
+            "Marketing & Sales": [
+                "Company Profile",
+                "Marketing Linkages Time",
+            ],
+            "Technology & Digital Support": [
+                "Data Support",
+                "Excel Skills Training",
+            ],
+        },
+        "Keitsile General Trading": {
+            "Marketing & Sales": [
+                "Website Development & Domain Email Reg",
+                "Pamphlets & Brochures",
+            ],
+            "Financial Management & Compliance": [
+                "Insurance Tips Webinar",
+                "Regulatory Compliance",
+            ],
+        },
+        "Kele Pheko Trading Lodge": {
+            "Marketing & Sales": [
+                "Social Media Page Setup",
+                "Branded Banner",
+            ],
+            "Financial Management & Compliance": [
+                "Risk Management Plan",
+                "Business Operations Plan",
+            ],
+        },
+        "Lapizi Trading": {
+            "Marketing & Sales": [
+                "Industry Membership",
+                "Company Profile",
+            ],
+            "Technology & Digital Support": [
+                "Digital Transformation",
+                "Industry Seminars",
+            ],
+        },
+        "Lesoslo Lodge": {
+            "Marketing & Sales": [
+                "Pamphlets & Brochures",
+                "Marketing Linkages Time",
+            ],
+            "Technology & Digital Support": [
+                "Technology Application Support",
+                "Growth Plan",
+            ],
+        },
+    }
 
+    # ==================== Ensure Session State Exists ====================
+    if "selected_enterprise" not in st.session_state:
+        st.session_state.selected_enterprise = list(enterprise_hub_map.keys())[0]
+    if "selected_hub" not in st.session_state:
+        st.session_state.selected_hub = enterprise_hub_map[st.session_state.selected_enterprise]
+    if "selected_province" not in st.session_state:
+        st.session_state.selected_province = hub_province_map[st.session_state.selected_hub]
+    if "selected_area_of_support" not in st.session_state:
+        st.session_state.selected_area_of_support = list(enterprise_data[st.session_state.selected_enterprise].keys())[0]
+    if "selected_intervention" not in st.session_state:
+        st.session_state.selected_intervention = enterprise_data[st.session_state.selected_enterprise][st.session_state.selected_area_of_support][0]
 
-    # ==================== Capture Form ====================
+    # ==================== Callbacks for Dynamic Updates ====================
+    def update_hub_and_province():
+        st.session_state.selected_hub = enterprise_hub_map[st.session_state.selected_enterprise]
+        st.session_state.selected_province = hub_province_map[st.session_state.selected_hub]
+        st.session_state.selected_area_of_support = list(enterprise_data[st.session_state.selected_enterprise].keys())[0]
+        st.session_state.selected_intervention = enterprise_data[st.session_state.selected_enterprise][st.session_state.selected_area_of_support][0]
+
+    def update_intervention():
+        st.session_state.selected_intervention = enterprise_data[st.session_state.selected_enterprise][st.session_state.selected_area_of_support][0]
+
+    # ==================== Selections (OUTSIDE THE FORM) ====================
+    st.subheader("📋 Add New Intervention Entry")
+
+    enterprise = st.selectbox("🏢 Enterprise", list(enterprise_hub_map.keys()),
+                              key="selected_enterprise",
+                              on_change=update_hub_and_province)
+
+    # Show dynamic hub & province (Disabled Inputs)
+    st.text_input("📍 Hub", st.session_state.selected_hub, disabled=True)
+    st.text_input("🌍 Province", st.session_state.selected_province, disabled=True)
+
+    # Area of Support Selection
+    areas_of_support = list(enterprise_data[st.session_state.selected_enterprise].keys())
+    selected_area_of_support = st.selectbox("📖 Select Area of Support", areas_of_support,
+                                            key="selected_area_of_support",
+                                            on_change=update_intervention)
+
+    # Intervention Selection
+    interventions = enterprise_data[st.session_state.selected_enterprise][st.session_state.selected_area_of_support]
+    selected_intervention = st.selectbox("🛠️ Select Intervention", interventions,
+                                         key="selected_intervention")
+
+    # ==================== Form (WITH SUBMIT BUTTON) ====================
     with st.form("intervention_form"):
-        st.subheader("📋 Add New Intervention Entry")
-        enterprise = st.selectbox("🏢 Enterprise", list(enterprise_hub_map.keys()))
-
-        # Create empty placeholders for dynamic hub and province updates
-        hub_placeholder = st.empty()
-        province_placeholder = st.empty()
-
-        # Update hub and province dynamically
-        hub = enterprise_hub_map.get(enterprise, "Unknown")
-        province = hub_province_map.get(hub, "Unknown")
-
-        # Display dynamic values in placeholders
-        hub_placeholder.text(f"📍 Hub: {hub}")
-        province_placeholder.text(f"🌍 Province: {province}")
-
-        area_of_support = st.selectbox("📖 Area of Support", sections)
-        intervention = st.selectbox("🛠️ Intervention", cleaned_interventions)
-
-        # Text Boxes for Additional Information
-
         poe = st.text_input("📄 POE Number")
-        col1, col2 = st.columns([20,1])
-        with col1:
-            consultant1 = st.text_input("👨‍💼 Consultant 1")
-            consultant2 = st.text_input("👩‍💼 Consultant 2")
-            consultant3 = st.text_input("👩‍💼 Consultant 3")
+        consultant1 = st.text_input("👨‍💼 Consultant 1")
+        consultant2 = st.text_input("👩‍💼 Consultant 2")
+        consultant3 = st.text_input("👩‍💼 Consultant 3")
         comment = st.text_area("📝 Comments")
 
         # Auto-fill Date & Quarter
         today = datetime.today()
-        date_str = today.strftime("%d-%b-%y")  # Format as "5-Oct-24"
-        month_str = today.strftime("%B")  # "October"
-        quarter_map = {1: "Q1", 2: "Q1", 3: "Q1",
-                       4: "Q2", 5: "Q2", 6: "Q2",
-                       7: "Q3", 8: "Q3", 9: "Q3",
-                       10: "Q4", 11: "Q4", 12: "Q4"}
+        date_str = today.strftime("%d-%b-%y")
+        month_str = today.strftime("%B")
+        quarter_map = {1: "Q1", 2: "Q1", 3: "Q1", 4: "Q2", 5: "Q2", 6: "Q2",
+                       7: "Q3", 8: "Q3", 9: "Q3", 10: "Q4", 11: "Q4", 12: "Q4"}
         quarter_str = quarter_map[today.month]
 
         st.write(f"📅 Date: {date_str}, 📆 Month: {month_str}, 🔢 Quarter: {quarter_str}")
@@ -351,36 +589,28 @@ elif menu_option == "Intervention Tracker":
 
     # ==================== Process Submission ====================
     if submit_button:
-        # Get quarter dynamically
-        today = datetime.today()
-        quarter_map = {1: "Q1", 2: "Q1", 3: "Q1", 4: "Q2", 5: "Q2", 6: "Q2", 7: "Q3", 8: "Q3", 9: "Q3", 10: "Q4",
-                       11: "Q4", 12: "Q4"}
-        quarter_str = quarter_map[today.month]
-
-        # Update Log Frame (Increment Actuals)
-        intervention_key = f"Number of SMMEs {intervention}"
-        actual_col = f"{hub} {quarter_str} Actual"
+        intervention_key = f"Number of SMMEs {st.session_state.selected_intervention}"
+        actual_col = f"{st.session_state.selected_hub} {quarter_str} Actual"
 
         if actual_col in structured_df.columns:
             structured_df.loc[
-                (structured_df["Output"] == area_of_support) &
+                (structured_df["Output"] == st.session_state.selected_area_of_support) &
                 (structured_df["Intervention"] == intervention_key),
                 actual_col
             ] += 1
 
-        # Save Updated Log Frame
         with open(DATA_FILE, "wb") as file:
             pickle.dump(structured_df, file)
 
         new_entry = pd.DataFrame([{
-            "Enterprise": enterprise,
-            "Province": province,
-            "Hub": hub,
+            "Enterprise": st.session_state.selected_enterprise,
+            "Province": st.session_state.selected_province,
+            "Hub": st.session_state.selected_hub,
             "Date": date_str,
             "Month": month_str,
             "Quarter": quarter_str,
-            "Area of Support": area_of_support,
-            "Intervention": intervention,
+            "Area of Support": st.session_state.selected_area_of_support,
+            "Intervention": st.session_state.selected_intervention,
             "POE": poe,
             "Consultant 1": consultant1,
             "Consultant 2": consultant2,
@@ -389,8 +619,6 @@ elif menu_option == "Intervention Tracker":
         }])
 
         actuals_df = pd.concat([actuals_df, new_entry], ignore_index=True)
-
-        # Save updated actuals
         with open(ACTUALS_FILE, "wb") as file:
             pickle.dump(actuals_df, file)
 
