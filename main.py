@@ -15,8 +15,8 @@ st.set_page_config(
 
 # ================== USER AUTHENTICATION ==================
 USER_CREDENTIALS = {
-    "admin": {"password": "password", "role": "admin"},
-    "user": {"password": "userpass", "role": "user"},
+    "helperzhou@gmail.com": {"password": "Helper123", "role": "admin"},
+    "shirley@sigmaintl.co.za": {"password": "Shirley123", "role": "user"},
 }
 
 # Initialize session state for authentication and role
