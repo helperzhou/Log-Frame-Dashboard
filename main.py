@@ -27,7 +27,7 @@ if "authenticated" not in st.session_state:
 
 # Login Page
 def login():
-    st.title("🔒 Login to Intervention Dashboard")
+    st.title("🔒 Login to :red[Quantilytix] Intervention :blue[Dashboard]")
 
     # Use temporary variables for inputs
     input_username = st.text_input("👤 Username", key="login_username")
